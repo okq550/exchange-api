@@ -53,6 +53,24 @@ public class ExchangeService {
         return trades;
     }
 
+    public Order cancel(long orderId) throws InterruptedException, ExecutionException {
+        Order remaining = exchange.cancel(orderId).get();
+        if (remaining == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
+        }
+
+        // 1. find the account that owns the order (remaining.accountId())
+        long ownerId = remaining.accountId();
+        Account owner = accountService.find(ownerId);
+        // 2. if it's a BUY: release cash = remaining quantity × remaining price
+        if (remaining.side() == Side.BUY) {
+            owner.releaseCash(remaining.quantity() * remaining.priceInCents());
+        } else { //    if it's a SELL: release shares = remaining quantity
+            owner.releaseShares(remaining.quantity());
+        }
+        return remaining;
+    }
+
     @PreDestroy
     public void shutdown() {
         exchange.stop();

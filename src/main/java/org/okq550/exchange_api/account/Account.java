@@ -37,8 +37,12 @@ public class Account {
         }
     }
 
+    public synchronized void releaseShares(long quantity) {
+        reservedShares -= quantity;
+    }
+
     public synchronized AccountView view() {
-        return new AccountView(id, cashInCents, reservedInCents, cashInCents - reservedInCents, shares);
+        return new AccountView(id, cashInCents, reservedInCents, cashInCents - reservedInCents, shares, reservedShares);
     }
 
     public synchronized void settleBuy(int quantity, long priceInCents, long limitInCents) {
@@ -53,6 +57,7 @@ public class Account {
         cashInCents = cashInCents + quantity * priceInCents;
     }
 
-    public record AccountView(long id, long cashInCents, long reservedInCents, long availableInCents, long shares) {
+    public record AccountView(long id, long cashInCents, long reservedInCents, long availableInCents, long shares,
+                              long reservedShares) {
     }
 }
