@@ -3,7 +3,10 @@ package org.okq550.exchange_api;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
 import org.okq550.exchange_api.account.Account;
+import org.okq550.exchange_api.trade.TradeRecord;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 public class AccountController {
@@ -20,7 +23,12 @@ public class AccountController {
 
     @GetMapping("/accounts/{id}")
     public Account.AccountView getAccount(@PathVariable long id) {
-        return accountService.find(id).view();
+        return accountService.view(id);
+    }
+
+    @GetMapping("/accounts/{id}/trades")
+    public List<TradeRecord> getTrades(@PathVariable long id) {
+        return accountService.trades(id);
     }
 
     private record AccountRequest(@PositiveOrZero long initialCashInCents,

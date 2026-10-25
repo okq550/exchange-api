@@ -1,7 +1,6 @@
 package org.okq550.exchange_api;
 
 import jakarta.annotation.PreDestroy;
-import org.okq550.exchange_api.account.Account;
 import org.okq550.exchange_api.domain.Order;
 import org.okq550.exchange_api.domain.Side;
 import org.okq550.exchange_api.domain.Trade;
@@ -27,46 +26,49 @@ public class ExchangeService {
         exchange.start();
     }
 
-    public List<Trade> place(long accountId, String symbol, Side side, int quantity, long priceInCents) throws InterruptedException, ExecutionException {
-        Account account = accountService.find(accountId);
-
+    public List<Trade> place(long accountId, String symbol, Side side, int quantity, long priceInCents)
+            throws InterruptedException, ExecutionException {
+        // 1. Reserve cash or shares (locked and saved inside AccountService)
         boolean reserved;
         if (side == Side.BUY) {
-            reserved = account.tryReserveCash((long) quantity * priceInCents);
+            reserved = accountService.tryReserveCash(accountId, (long) quantity * priceInCents);
         } else {
-            reserved = account.tryReserveShares(quantity);
+            reserved = accountService.tryReserveShares(accountId, quantity);
         }
-
         if (!reserved) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds or shares");
         }
 
+        // 2. Build the order and remember it for settlement
         Order order = new Order(nextId.incrementAndGet(), accountId, symbol, side, quantity, priceInCents);
         orders.put(order.id(), order);
+
+        // 3. Match it on the engine thread
         List<Trade> trades = exchange.submit(order).get();
-        for (Trade t : trades) {                             // NEW: settle each trade
-            Order buy = orders.get(t.buyOrderId());
-            Order sell = orders.get(t.sellOrderId());
-            accountService.find(buy.accountId()).settleBuy(t.quantity(), t.priceInCents(), buy.priceInCents());
-            accountService.find(sell.accountId()).settleSell(t.quantity(), t.priceInCents());
+
+        // 4. Settle each trade: both accounts in one transaction
+        for (Trade t : trades) {
+            Order buy = orders.get(t.buyerOrderId());
+            Order sell = orders.get(t.sellerOrderId());
+            accountService.settleTrade(buy.accountId(), sell.accountId(), symbol,
+                    t.quantity(), t.priceInCents(), buy.priceInCents());
         }
+
         return trades;
     }
 
     public Order cancel(long orderId) throws InterruptedException, ExecutionException {
+        // 1. Remove it from the book on the engine thread; the result has the remaining quantity
         Order remaining = exchange.cancel(orderId).get();
         if (remaining == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
         }
 
-        // 1. find the account that owns the order (remaining.accountId())
-        long ownerId = remaining.accountId();
-        Account owner = accountService.find(ownerId);
-        // 2. if it's a BUY: release cash = remaining quantity × remaining price
+        // 2. Release what the remainder was holding
         if (remaining.side() == Side.BUY) {
-            owner.releaseCash(remaining.quantity() * remaining.priceInCents());
-        } else { //    if it's a SELL: release shares = remaining quantity
-            owner.releaseShares(remaining.quantity());
+            accountService.releaseCash(remaining.accountId(), (long) remaining.quantity() * remaining.priceInCents());
+        } else {
+            accountService.releaseShares(remaining.accountId(), remaining.quantity());
         }
         return remaining;
     }

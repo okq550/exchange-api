@@ -1,63 +1,74 @@
 package org.okq550.exchange_api.account;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
 public class Account {
-    private final long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private long cashInCents;
     private long reservedInCents;
     private long shares;
     private long reservedShares;
 
-    public Account(long id, long initialCashInCents, long initialShares) {
-        this.id = id;
+    // Won't be called by the code by accident
+    protected Account() {
+    }   // for JPA only
+
+    public Account(long initialCashInCents, long initialShares) {
         this.cashInCents = initialCashInCents;
         this.shares = initialShares;
     }
 
     // Check that enough cash is available, and if so, reserve it.
     // Returns true if reserved, false if there isn't enough.
-    public synchronized boolean tryReserveCash(long amountInCents) {
+    public boolean tryReserveCash(long amountInCents) {
         if (cashInCents - reservedInCents < amountInCents) {
             return false;
-        } else {
-            reservedInCents += amountInCents;
-            return true;
         }
+        reservedInCents += amountInCents;
+        return true;
     }
 
-    public synchronized void releaseCash(long amountInCents) {
+    public boolean tryReserveShares(long quantity) {
+        if (shares - reservedShares < quantity) {
+            return false;
+        }
+        reservedShares += quantity;
+        return true;
+    }
+
+    public void releaseCash(long amountInCents) {
         reservedInCents -= amountInCents;
     }
 
-    public synchronized boolean tryReserveShares(long quanity) {
-        if (shares - reservedShares < quanity) {
-            return false;
-        } else {
-            reservedShares += quanity;
-            return true;
-        }
-    }
-
-    public synchronized void releaseShares(long quantity) {
+    public void releaseShares(long quantity) {
         reservedShares -= quantity;
     }
 
-    public synchronized AccountView view() {
-        return new AccountView(id, cashInCents, reservedInCents, cashInCents - reservedInCents, shares, reservedShares);
-    }
-
-    public synchronized void settleBuy(int quantity, long priceInCents, long limitInCents) {
+    public void settleBuy(int quantity, long priceInCents, long limitInCents) {
         reservedInCents -= quantity * limitInCents;
         cashInCents -= quantity * priceInCents;
         shares += quantity;
     }
 
-    public synchronized void settleSell(int quantity, long priceInCents) {
+    public void settleSell(int quantity, long priceInCents) {
         reservedShares -= quantity;
         shares -= quantity;
-        cashInCents = cashInCents + quantity * priceInCents;
+        cashInCents += quantity * priceInCents;
     }
 
-    public record AccountView(long id, long cashInCents, long reservedInCents, long availableInCents, long shares,
-                              long reservedShares) {
+    public AccountView view() {
+        return new AccountView(id, cashInCents, reservedInCents,
+                cashInCents - reservedInCents, shares, reservedShares);
+    }
+
+    public record AccountView(long id, long cashInCents, long reservedInCents,
+                              long availableInCents, long shares, long reservedShares) {
     }
 }
