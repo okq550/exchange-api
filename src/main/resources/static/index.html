@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Live ticker</title></head>
+<body style="font-family: monospace; padding: 16px">
+<h2>AAPL live</h2>
+<div id="best">waiting for data...</div>
+<ul id="trades"></ul>
+<script>
+    const ws = new WebSocket("ws://" + location.host + "/ws/market");
+    ws.onmessage = (event) => {
+        const text = event.data;
+        if (text.startsWith("MARKET BEST")) {
+            document.getElementById("best").textContent = text;
+        } else {
+            const li = document.createElement("li");
+            li.textContent = text;
+            document.getElementById("trades").prepend(li);
+        }
+    };
+</script>
+</body>
+</html>

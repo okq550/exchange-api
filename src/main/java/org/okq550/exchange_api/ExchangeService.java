@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,7 +27,7 @@ public class ExchangeService {
         exchange.start();
     }
 
-    public List<Trade> place(long accountId, String symbol, Side side, int quantity, long priceInCents)
+    public PlaceResult place(long accountId, String symbol, Side side, int quantity, long priceInCents)
             throws InterruptedException, ExecutionException {
         // 1. Reserve cash or shares (locked and saved inside AccountService)
         boolean reserved;
@@ -54,7 +55,7 @@ public class ExchangeService {
                     t.quantity(), t.priceInCents(), buy.priceInCents());
         }
 
-        return trades;
+        return new PlaceResult(order.id(), trades);
     }
 
     public Order cancel(long orderId) throws InterruptedException, ExecutionException {
@@ -71,6 +72,14 @@ public class ExchangeService {
             accountService.releaseShares(remaining.accountId(), remaining.quantity());
         }
         return remaining;
+    }
+
+    public void subscribe(BlockingQueue<String> mailbox) {
+        exchange.subscribe(mailbox);
+    }
+
+    public void unsubscribe(BlockingQueue<String> mailbox) {
+        exchange.unsubscribe(mailbox);
     }
 
     @PreDestroy

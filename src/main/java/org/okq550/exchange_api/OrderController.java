@@ -6,10 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import org.okq550.exchange_api.domain.Order;
 import org.okq550.exchange_api.domain.Side;
-import org.okq550.exchange_api.domain.Trade;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -21,7 +19,7 @@ public class OrderController {
     }
 
     @PostMapping("/orders")
-    public List<Trade> placeOrder(@Valid @RequestBody OrderRequest request) throws ExecutionException, InterruptedException {
+    public PlaceResult placeOrder(@Valid @RequestBody OrderRequest request) throws ExecutionException, InterruptedException {
         return exchangeService.place(request.accountId(), request.symbol(), request.side(), request.quantity(), request.priceInCents());
     }
 
