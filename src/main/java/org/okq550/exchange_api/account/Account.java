@@ -51,12 +51,14 @@ public class Account {
         reservedShares -= quantity;
     }
 
+    // Deduct the reservedInCents and the cashInCents, Then increase the quantity.
     public void settleBuy(int quantity, long priceInCents, long limitInCents) {
         reservedInCents -= quantity * limitInCents;
         cashInCents -= quantity * priceInCents;
         shares += quantity;
     }
 
+    // Deduct the reservedShares and the shares, Then increase the cashInCents.
     public void settleSell(int quantity, long priceInCents) {
         reservedShares -= quantity;
         shares -= quantity;

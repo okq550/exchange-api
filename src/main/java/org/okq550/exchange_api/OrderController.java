@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import org.okq550.exchange_api.domain.Order;
 import org.okq550.exchange_api.domain.Side;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,12 +18,12 @@ public class OrderController {
     }
 
     @PostMapping("/orders")
-    public PlaceResult placeOrder(@Valid @RequestBody OrderRequest request) throws ExecutionException, InterruptedException {
+    public OrderAccepted placeOrder(@Valid @RequestBody OrderRequest request) throws ExecutionException, InterruptedException {
         return exchangeService.place(request.accountId(), request.symbol(), request.side(), request.quantity(), request.priceInCents());
     }
 
     @DeleteMapping("/orders/{id}")
-    public Order cancelOrder(@Valid @PathVariable("id") long orderId) throws InterruptedException, ExecutionException {
+    public CancelAccepted cancelOrder(@Valid @PathVariable("id") long orderId) throws InterruptedException, ExecutionException {
         return exchangeService.cancel(orderId);
     }
 

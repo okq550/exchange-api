@@ -17,6 +17,7 @@ public class MarketDataHandler extends TextWebSocketHandler {
 
     private final ExchangeService exchangeService;
     private final ConcurrentHashMap<String, Subscriber> subscribers = new ConcurrentHashMap<>();
+
     public MarketDataHandler(ExchangeService exchangeService) {
         this.exchangeService = exchangeService;
     }

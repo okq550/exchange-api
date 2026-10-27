@@ -6,13 +6,20 @@ import org.okq550.exchange_api.domain.Side;
 import org.okq550.exchange_api.domain.Trade;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MatchingEngine {
     private final OrderBook book = new OrderBook();
+    private final Set<Long> seenOrderIds = new HashSet<>();
 
     // Stub: will match orders later. For now, it returns no trade.
     public List<Trade> submit(Order order) {
+        if (!seenOrderIds.add(order.id())) {
+            return List.of(); // already processed: a redelivered duplicate, ignore it
+        }
+
         List<Trade> trades = new ArrayList<>();
 
         int remaining = order.quantity();
@@ -30,10 +37,14 @@ public class MatchingEngine {
             int tradeQty = Math.min(remaining, best.quantity());
             // best.priceInCents() is the resting order price.
 
-            long buyId = (order.side() == Side.BUY) ? order.id() : best.id();
-            long sellId = (order.side() == Side.BUY) ? best.id() : order.id();
+            // The incoming order and the resting one: one is the buy, the other the sell.
+            Order buyOrder = (order.side() == Side.BUY) ? order : best;
+            Order sellOrder = (order.side() == Side.BUY) ? best : order;
 
-            trades.add(new Trade(buyId, sellId, order.symbol(), tradeQty, best.priceInCents()));
+            trades.add(new Trade(
+                    buyOrder.id(), sellOrder.id(),
+                    buyOrder.accountId(), sellOrder.accountId(), buyOrder.priceInCents(),
+                    order.symbol(), tradeQty, best.priceInCents()));   // price is still the resting order's price
             remaining = remaining - tradeQty;
             if (tradeQty == best.quantity()) {
                 book.cancel(best.id());
