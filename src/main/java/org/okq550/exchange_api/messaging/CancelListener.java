@@ -1,6 +1,6 @@
 package org.okq550.exchange_api.messaging;
 
-import org.okq550.exchange_api.AccountService;
+import org.okq550.exchange_api.account.AccountService;
 import org.okq550.exchange_api.domain.Order;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;

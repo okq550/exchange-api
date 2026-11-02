@@ -1,6 +1,6 @@
 package org.okq550.exchange_api.marketdata;
 
-import org.okq550.exchange_api.ExchangeService;
+import org.okq550.exchange_api.order.ExchangeService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -15,11 +15,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class MarketDataHandler extends TextWebSocketHandler {
 
-    private final ExchangeService exchangeService;
+    private final MarketDataBroadcaster broadcaster;
     private final ConcurrentHashMap<String, Subscriber> subscribers = new ConcurrentHashMap<>();
 
-    public MarketDataHandler(ExchangeService exchangeService) {
-        this.exchangeService = exchangeService;
+    public MarketDataHandler(MarketDataBroadcaster broadcaster) {
+        this.broadcaster = broadcaster;
     }
 
     @Override
@@ -35,7 +35,7 @@ public class MarketDataHandler extends TextWebSocketHandler {
                 // browser disconnected, or we were stopped
             }
         });
-        exchangeService.subscribe(mailbox);
+        broadcaster.subscribe(mailbox);
         subscribers.put(session.getId(), new Subscriber(mailbox, courier));
     }
 
@@ -43,7 +43,7 @@ public class MarketDataHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         Subscriber subscriber = subscribers.remove(session.getId());
         if (subscriber != null) {
-            exchangeService.unsubscribe(subscriber.mailbox());
+            broadcaster.unsubscribe(subscriber.mailbox());
             subscriber.courier().interrupt();
         }
     }

@@ -1,11 +1,9 @@
-package org.okq550.exchange_api;
+package org.okq550.exchange_api.order;
 
 import jakarta.transaction.Transactional;
+import org.okq550.exchange_api.account.AccountService;
 import org.okq550.exchange_api.domain.Order;
 import org.okq550.exchange_api.domain.Side;
-import org.okq550.exchange_api.exchange.Exchange;
-import org.okq550.exchange_api.order.OrderRecord;
-import org.okq550.exchange_api.order.OrderRecordRepository;
 import org.okq550.exchange_api.outbox.OutboxMessage;
 import org.okq550.exchange_api.outbox.OutboxMessageRepository;
 import org.springframework.http.HttpStatus;
@@ -19,16 +17,14 @@ import java.util.concurrent.BlockingQueue;
 public class ExchangeService {
     private final AccountService accountService;
     private final OrderRecordRepository orderRecordRepository;
-    private final OutboxMessageRepository outboxRepository;
-    private final Exchange exchange;                         // injected now, not created here
+    private final OutboxMessageRepository outboxRepository;     // injected now, not created here
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public ExchangeService(AccountService accountService, OrderRecordRepository orderRecordRepository, OutboxMessageRepository outboxRepository, Exchange exchange,
+    public ExchangeService(AccountService accountService, OrderRecordRepository orderRecordRepository, OutboxMessageRepository outboxRepository,
                            KafkaTemplate<String, String> kafkaTemplate) {
         this.accountService = accountService;
         this.orderRecordRepository = orderRecordRepository;
         this.outboxRepository = outboxRepository;
-        this.exchange = exchange;
         this.kafkaTemplate = kafkaTemplate;
         // no exchange.start() here: ExchangeConfig already started it
     }
@@ -60,13 +56,5 @@ public class ExchangeService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         outboxRepository.save(new OutboxMessage("orders.in", record.getSymbol(), "CANCEL|" + orderId));
         return new CancelAccepted(orderId);
-    }
-
-    public void subscribe(BlockingQueue<String> mailbox) {
-        exchange.subscribe(mailbox);
-    }
-
-    public void unsubscribe(BlockingQueue<String> mailbox) {
-        exchange.unsubscribe(mailbox);
     }
 }

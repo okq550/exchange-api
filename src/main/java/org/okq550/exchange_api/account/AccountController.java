@@ -1,8 +1,7 @@
-package org.okq550.exchange_api;
+package org.okq550.exchange_api.account;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
-import org.okq550.exchange_api.account.Account;
 import org.okq550.exchange_api.trade.TradeRecord;
 import org.springframework.web.bind.annotation.*;
 

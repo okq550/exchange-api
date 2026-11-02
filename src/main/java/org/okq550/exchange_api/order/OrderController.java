@@ -1,4 +1,4 @@
-package org.okq550.exchange_api;
+package org.okq550.exchange_api.order;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

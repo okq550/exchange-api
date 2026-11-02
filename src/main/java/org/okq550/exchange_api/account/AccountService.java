@@ -1,9 +1,5 @@
-package org.okq550.exchange_api;
+package org.okq550.exchange_api.account;
 
-import org.okq550.exchange_api.account.Account;
-import org.okq550.exchange_api.account.AccountRepository;
-import org.okq550.exchange_api.account.ProcessedEvent;
-import org.okq550.exchange_api.account.ProcessedEventRepository;
 import org.okq550.exchange_api.domain.Order;
 import org.okq550.exchange_api.domain.Side;
 import org.okq550.exchange_api.trade.TradeRecord;
