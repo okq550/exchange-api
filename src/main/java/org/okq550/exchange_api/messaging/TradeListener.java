@@ -2,6 +2,8 @@ package org.okq550.exchange_api.messaging;
 
 import org.okq550.exchange_api.account.AccountService;
 import org.okq550.exchange_api.domain.Trade;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Component;
 public class TradeListener {
 
     private final AccountService accountService;
+    private static final Logger log = LoggerFactory.getLogger(TradeListener.class);
 
     public TradeListener(AccountService accountService) {
         this.accountService = accountService;
@@ -21,7 +24,7 @@ public class TradeListener {
         try {
             trade = Trade.fromWire(message);
         } catch (RuntimeException e) {
-            System.out.println("Skipping malformed trade: " + message);
+            log.warn("Skipping malformed trade: {}", message, e);
             return;
         }
 
@@ -34,5 +37,7 @@ public class TradeListener {
                 trade.quantity(),
                 trade.priceInCents(),
                 trade.buyLimitInCents());
+
+        log.info("Settled trade buyOrder={} sellOrder={} qty={} price={}", trade.buyerOrderId(), trade.sellerOrderId(), trade.quantity(), trade.priceInCents());
     }
 }

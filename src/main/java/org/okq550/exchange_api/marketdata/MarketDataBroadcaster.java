@@ -1,5 +1,7 @@
 package org.okq550.exchange_api.marketdata;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -8,6 +10,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 public class MarketDataBroadcaster {
+
+    private static final Logger log = LoggerFactory.getLogger(MarketDataBroadcaster.class);
 
     private final List<BlockingQueue<String>> mailboxes = new CopyOnWriteArrayList<>();
 
@@ -23,7 +27,7 @@ public class MarketDataBroadcaster {
     public void publish(String message) {
         for (BlockingQueue<String> mailbox : mailboxes) {
             if (!mailbox.offer(message)) {
-                System.out.println("Slow subscriber: message dropped");
+                log.warn("Slow subscriber: message dropped");
             }
         }
     }
