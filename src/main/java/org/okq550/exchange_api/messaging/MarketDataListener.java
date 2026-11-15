@@ -13,7 +13,10 @@ public class MarketDataListener {
         this.broadcaster = broadcaster;
     }
 
-    @KafkaListener(topics = "market.data", groupId = "exchange-api-market-data")
+    @KafkaListener(
+            topics = "market.data",
+            groupId = "exchange-api-market-data-${HOSTNAME:local}",
+            properties = "auto.offset.reset=latest")
     public void onMarketData(String message) {
         broadcaster.publish(message);
     }

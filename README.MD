@@ -104,3 +104,50 @@ Consumer lag	kafka_consumer_fetch_manager_records_lag{topic=~"orders.in|trades|c
 Order request p99 (seconds)	histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri="/orders"}[1m])))
 GC pause max (seconds)	max(jvm_gc_pause_seconds_max)
 
+Deploy Steps
+
+git update-index --chmod=+x mvnw
+git commit -m "Make Maven wrapper executable"
+
+Kubernetes	What it is	Compose equivalent
+Pod	one running instance of a container	a running container
+Deployment	“keep N pods of this image running”	a service: entry
+Service	a stable name and address in front of pods	the service name on the Compose network
+Secret	sensitive config, such as passwords	values in environment:
+Probes	liveness and readiness checks	healthcheck:
+
+Step 1: tools and a local cluster. kind runs a Kubernetes cluster inside Docker on your Mac.
+
+brew install kind kubectl
+kind create cluster --name exchange
+kubectl get nodes
+
+Step 2: put your images into the cluster. The cluster can’t see your laptop’s local images by default, so load them in. First, stop Compose to free the ports (docker compose down in IdeaProjects), then build fresh images from each project folder, and load them:
+
+docker build -t exchange-api:dev ./exchange-api
+docker build -t matching-engine:dev ./matching-engine
+kind load docker-image exchange-api:dev matching-engine:dev --name exchange
+
+Step 4: apply it and watch.
+
+kubectl apply -f k8s/exchange.yaml
+kubectl get pods --watch
+
+Step 5: reach the API. Forward a port from your laptop into the cluster:
+
+kubectl port-forward service/exchange-api 8080:8080
+
+* selector and labels are how the pieces find each other. A Deployment manages the pods with label app: kafka, and the Service named kafka sends traffic to pods with that same label. The Service name is what makes kafka:9092 resolve, exactly as on the Compose network.
+* The password lives in a Secret, referenced by name. The Deployments never contain it.
+* Three probes per Java service. The startup probe gives the app up to 2 minutes (60 × 2 s) to boot, and liveness checks don’t start until it passes, so a slow startup isn’t mistaken for a hang. Readiness uses the endpoints you built in Lesson 9.4: for the engine, it stays not-ready until its replay finishes.
+* imagePullPolicy: IfNotPresent tells Kubernetes to use the image you loaded, rather than trying to download exchange-api:dev from a registry.
+* PostgreSQL has no persistent storage here: delete its pod, and the data is gone. That’s acceptable for learning. Production uses a StatefulSet with a persistent volume, or more commonly a managed database outside Kubernetes.
+
+
+Rebuild and re-deploy
+
+docker build -t exchange-api:dev ./exchange-api
+kind load docker-image exchange-api:dev --name exchange
+kubectl rollout restart deployment exchange-api
+kubectl scale deployment exchange-api --replicas=2
+
