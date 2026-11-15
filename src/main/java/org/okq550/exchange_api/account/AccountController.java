@@ -5,6 +5,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import org.okq550.exchange_api.trade.TradeRecord;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -16,17 +17,19 @@ public class AccountController {
     }
 
     @PostMapping("/accounts")
-    public Account.AccountView createAccount(@Valid @RequestBody AccountRequest request) {
-        return accountService.create(request.initialCashInCents(), request.initialShares());
+    public Account.AccountView createAccount(@Valid @RequestBody AccountRequest request, Principal principal) {
+        return accountService.create(principal.getName(), request.initialCashInCents(), request.initialShares());
     }
 
     @GetMapping("/accounts/{id}")
-    public Account.AccountView getAccount(@PathVariable long id) {
+    public Account.AccountView getAccount(@PathVariable long id, Principal principal) {
+        accountService.requireOwner(id, principal.getName());
         return accountService.view(id);
     }
 
     @GetMapping("/accounts/{id}/trades")
-    public List<TradeRecord> getTrades(@PathVariable long id) {
+    public List<TradeRecord> getTrades(@PathVariable long id, Principal principal) {
+        accountService.requireOwner(id, principal.getName());
         return accountService.trades(id);
     }
 

@@ -30,8 +30,8 @@ class SettlementIntegrationTest {
 
     @Test
     void tradeMovesCashAndSharesBetweenAccounts() {
-        long buyer = accountService.create(1_000_000, 0).id();
-        long seller = accountService.create(0, 50).id();
+        long buyer = accountService.create( "alice", 1_000_000, 0).id();
+        long seller = accountService.create("bob", 0, 50).id();
 
         exchangeService.place(buyer, "AAPL", Side.BUY, 10, 10_100);
         exchangeService.place(seller, "AAPL", Side.SELL, 10, 10_000);
@@ -51,7 +51,7 @@ class SettlementIntegrationTest {
 
     @Test
     void cancellingRestingBuyReleasesItsFullReservation() {
-        long buyer = accountService.create(1_000_000, 0).id();
+        long buyer = accountService.create("alice", 1_000_000, 0).id();
 
         long orderId = exchangeService.place(buyer, "AAPL", Side.BUY, 10, 9_000).orderId();
 
@@ -59,7 +59,7 @@ class SettlementIntegrationTest {
         assertEquals(10 * 9_000, accountService.view(buyer).reservedInCents());
 
         // Safe to cancel immediately: it queues behind the order in the same partition
-        exchangeService.cancel(orderId);
+        exchangeService.cancel(orderId, "alice");
 
         // The release happens asynchronously, once the CancelListener processes the cancels message
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
@@ -73,8 +73,8 @@ class SettlementIntegrationTest {
     @Test
     @DisplayName("A redelivered trade message is settled only once")
     void duplicateTradeMessageIsSettledOnlyOnce() {
-        long buyer = accountService.create(1_000_000, 0).id();   // $10,000
-        long seller = accountService.create(0, 50).id();          // 50 shares
+        long buyer = accountService.create("alice", 1_000_000, 0).id();   // $10,000
+        long seller = accountService.create("bob", 0, 50).id();          // 50 shares
 
         // A price no other test uses, so this pair can only match each other
         long buyOrderId = exchangeService.place(buyer, "AAPL", Side.BUY, 10, 8_000).orderId();

@@ -1,0 +1,2 @@
+ALTER TABLE account ADD COLUMN owner varchar(255) NOT NULL DEFAULT 'alice';
+ALTER TABLE account ALTER COLUMN owner DROP DEFAULT;

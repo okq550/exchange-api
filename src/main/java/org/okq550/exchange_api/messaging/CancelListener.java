@@ -24,6 +24,7 @@ public class CancelListener {
         Order remaining;
         try {
             remaining = Order.fromWire(message);   // e.g. "7|1|AAPL|BUY|70|10100"
+            log.info("Cancel released orderId={}", remaining.id());
         } catch (RuntimeException e) {
             log.warn("Skipping malformed cancel: {}", message, e);
             return;

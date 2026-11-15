@@ -4,8 +4,12 @@ import jakarta.transaction.Transactional;
 import org.okq550.exchange_api.account.AccountService;
 import org.okq550.exchange_api.domain.Order;
 import org.okq550.exchange_api.domain.Side;
+import org.okq550.exchange_api.messaging.TradeListener;
 import org.okq550.exchange_api.outbox.OutboxMessage;
 import org.okq550.exchange_api.outbox.OutboxMessageRepository;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -19,6 +23,7 @@ public class ExchangeService {
     private final OrderRecordRepository orderRecordRepository;
     private final OutboxMessageRepository outboxRepository;     // injected now, not created here
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private static final Logger log = LoggerFactory.getLogger(ExchangeService.class);
 
     public ExchangeService(AccountService accountService, OrderRecordRepository orderRecordRepository, OutboxMessageRepository outboxRepository,
                            KafkaTemplate<String, String> kafkaTemplate) {
@@ -47,13 +52,16 @@ public class ExchangeService {
         Order order = new Order(saved.getId(), accountId, symbol, side, quantity, priceInCents);
         // 3. queue the Kafka message in the SAME transaction (no kafkaTemplate here anymore)
         outboxRepository.save(new OutboxMessage("orders.in", symbol, "PLACE|" + order.toWire()));
+
+        log.info("Order accepted orderId={} accountId={} side={} qty={} price={}", saved.getId(), accountId, side, quantity, priceInCents);
         return new OrderAccepted(order.id());
     }
 
     @Transactional
-    public CancelAccepted cancel(long orderId) {
+    public CancelAccepted cancel(long orderId, String username) {
         OrderRecord record = orderRecordRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        accountService.requireOwner(record.getAccountId(), username);   // someone else's order looks like no order
         outboxRepository.save(new OutboxMessage("orders.in", record.getSymbol(), "CANCEL|" + orderId));
         return new CancelAccepted(orderId);
     }

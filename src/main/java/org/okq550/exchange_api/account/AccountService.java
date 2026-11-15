@@ -25,8 +25,17 @@ public class AccountService {
     }
 
     @Transactional
-    public Account.AccountView create(long initialCashInCents, long initialShares) {
-        return accountRepository.save(new Account(initialCashInCents, initialShares)).view();
+    public Account.AccountView create(String owner, long initialCashInCents, long initialShares) {
+        return accountRepository.save(new Account(owner, initialCashInCents, initialShares)).view();
+    }
+
+    @Transactional(readOnly = true)
+    public void requireOwner(long accountId, String username) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow( () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+        if(!account.getOwner().equals(username)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found");
+        }
     }
 
     // TODO: Why readOnly?

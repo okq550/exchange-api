@@ -11,6 +11,7 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String owner;
     private long cashInCents;
     private long reservedInCents;
     private long shares;
@@ -20,10 +21,13 @@ public class Account {
     protected Account() {
     }   // for JPA only
 
-    public Account(long initialCashInCents, long initialShares) {
+    public Account(String owner, long initialCashInCents, long initialShares) {
+        this.owner = owner;
         this.cashInCents = initialCashInCents;
         this.shares = initialShares;
     }
+
+    public String getOwner() { return owner; }
 
     // Check that enough cash is available, and if so, reserve it.
     // Returns true if reserved, false if there isn't enough.

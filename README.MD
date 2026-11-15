@@ -6,6 +6,12 @@ docker volume rm exchange-data
 
 docker run -d --name kafka -p 9092:9092 apache/kafka:latest
 
+docker run -d --name prometheus -p 9090:9090 \
+-v "$(pwd)/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml" \
+prom/prometheus
+
+docker run -d --name grafana -p 3000:3000 grafana/grafana
+
 -- Create a kafka service
 docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders.in
 
@@ -74,3 +80,27 @@ curl -s http://localhost:8080/accounts/2 | jq
 
 # 14. Account 3 → cash 949500, reserved 0, shares 5
 curl -s http://localhost:8080/accounts/3 | jq
+
+
+# Useful loop for creating orders
+while true; do                                                                                               
+curl -s -X POST http://localhost:8080/orders -H 'Content-Type: application/json' \
+-d '{"accountId": 1, "symbol": "AAPL", "side": "BUY", "quantity": 1, "priceInCents": 10000}' > /dev/null
+
+curl -s -X POST http://localhost:8080/orders -H 'Content-Type: application/json' \
+-d '{"accountId": 2, "symbol": "AAPL", "side": "SELL", "quantity": 1, "priceInCents": 10000}' > /dev/null
+
+sleep 0.2
+done
+
+# Usefull command to find all trade traces:
+docker compose logs --no-log-prefix exchange-api matching-engine | grep -E "(orderId|buyOrder|sellOrder)=5\b"
+
+Grafana Dashboard panels:
+
+Title	Query
+Orders per second	sum(rate(http_server_requests_seconds_count{uri="/orders"}[1m]))
+Consumer lag	kafka_consumer_fetch_manager_records_lag{topic=~"orders.in|trades|cancels"}
+Order request p99 (seconds)	histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri="/orders"}[1m])))
+GC pause max (seconds)	max(jvm_gc_pause_seconds_max)
+

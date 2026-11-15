@@ -38,6 +38,6 @@ public class TradeListener {
                 trade.priceInCents(),
                 trade.buyLimitInCents());
 
-        log.info("Settled trade buyOrder={} sellOrder={} qty={} price={}", trade.buyerOrderId(), trade.sellerOrderId(), trade.quantity(), trade.priceInCents());
+        log.info("Trade settled buyOrder={} sellOrder={} qty={} price={}", trade.buyerOrderId(), trade.sellerOrderId(), trade.quantity(), trade.priceInCents());
     }
 }
